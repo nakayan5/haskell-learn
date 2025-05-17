@@ -13,15 +13,15 @@ addTodo :: String -> TodoList -> TodoList
 addTodo t todos = todos ++ [Todo t False]
 
 -- タスクを完了する
-completeTodo :: Int -> TodoList -> Maybe TodoList
-completeTodo idx todos =
-  if idx >= 0 && idx < length todos
-    then
+completeTodo :: Int -> TodoList -> Either String TodoList
+completeTodo idx todos
+  | idx < 0 = Left "インデックスは0以上である必要があります。"
+  | idx >= length todos = Left "インデックスが範囲外です。"
+  | otherwise =
       let (before, rest) = splitAt idx todos
        in case rest of
-            (t : after) -> Just (before ++ [t {done = True}] ++ after)
-            [] -> Nothing
-    else Nothing
+            (t : after) -> Right (before ++ [t {done = True}] ++ after)
+            [] -> Left "タスクが見つかりません。"
 
 -- タスクリストを文字列に変換
 formatTodos :: TodoList -> String

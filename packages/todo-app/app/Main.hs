@@ -18,8 +18,10 @@ loop todos = do
       loop (addTodo (unwords rest) todos)
     ("done" : i : _) ->
       case completeTodo (read i) todos of
-        Just newTodos -> loop newTodos
-        Nothing -> putStrLn "Invalid index!" >> loop todos
+        Right newTodos ->
+          loop newTodos
+        Left errMsg ->
+          putStrLn ("error: " ++ errMsg) >> loop todos
     ("quit" : _) ->
       putStrLn "Goodbye!"
     _ ->
