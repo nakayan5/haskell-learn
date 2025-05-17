@@ -10,26 +10,33 @@ data Todo = Todo
 
 type TodoList = [Todo]
 
+data TodoError
+  = IndexTooSmall
+  | IndexTooLarge
+  | TaskAlreadyDone
+  | TaskNotFound
+  deriving (Show)
+
 -- タスクを追加する
 addTodo :: String -> TodoList -> TodoList
 addTodo t todos = todos ++ [Todo t False]
 
 -- タスクを完了する
-completeTodo :: Int -> TodoList -> Either String TodoList
+completeTodo :: Int -> TodoList -> Either TodoError TodoList
 completeTodo idx todos = do
   when (idx < 0) $
-    Left "インデックスは0以上でなければなりません"
+    Left IndexTooSmall
 
   when (idx >= length todos) $
-    Left "インデックスが範囲外です"
+    Left IndexTooLarge
 
   let (before, rest) = splitAt idx todos
 
   case rest of
-    [] -> Left "想定外のエラー：タスクが存在しません"
+    [] -> Left TaskNotFound
     (t : after) -> do
       when (done t) $
-        Left "すでに完了済みのタスクです"
+        Left TaskAlreadyDone
       return (before ++ [t {done = True}] ++ after)
 
 -- タスクリストを文字列に変換

@@ -14,15 +14,29 @@ loop todos = do
   hFlush stdout
   input <- getLine
   case words input of
-    ("add" : rest) ->
-      loop (addTodo (unwords rest) todos)
+    ("add" : rest) -> do
+      let newTodos = addTodo (unwords rest) todos
+      loop newTodos
     ("done" : i : _) ->
-      case completeTodo (read i) todos of
-        Right newTodos ->
-          loop newTodos
-        Left errMsg ->
-          putStrLn ("error: " ++ errMsg) >> loop todos
+      case reads i of
+        [(n, "")] ->
+          case completeTodo n todos of
+            Right newTodos -> loop newTodos
+            Left err -> do
+              putStrLn ("Error: " ++ renderError err)
+              loop todos
+        _ -> do
+          putStrLn "Error: 数字のインデックスを指定してください"
+          loop todos
     ("quit" : _) ->
       putStrLn "Goodbye!"
-    _ ->
-      putStrLn "Invalid command!" >> loop todos
+    _ -> do
+      putStrLn "Invalid command!"
+      loop todos
+
+-- エラーの説明を文字列に変換する関数
+renderError :: TodoError -> String
+renderError IndexTooSmall = "インデックスが小さすぎます。0以上にしてください。"
+renderError IndexTooLarge = "インデックスが大きすぎます。存在するタスクの範囲内にしてください。"
+renderError TaskAlreadyDone = "そのタスクはすでに完了済みです。"
+renderError TaskNotFound = "指定されたタスクが見つかりません。"
