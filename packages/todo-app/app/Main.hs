@@ -1,37 +1,46 @@
+{-# LANGUAGE LambdaCase #-}
+
 module Main where
 
+import Control.Monad.Except
+import Control.Monad.IO.Class (liftIO)
 import System.IO (hFlush, stdout)
+import Text.Read (readMaybe)
 import Todo
 
+-- アプリケーション本体
 main :: IO ()
-main = loop []
+main =
+  runExceptT (loop []) >>= \case
+    Left err -> putStrLn $ "エラー: " ++ renderError err
+    Right () -> return ()
 
-loop :: TodoList -> IO ()
+-- メインループ（ExceptT版）
+loop :: TodoList -> ExceptT TodoError IO ()
 loop todos = do
-  putStrLn "\n== ToDo List =="
-  putStrLn (formatTodos todos)
-  putStr "Command (add <task> | done <index> | quit): "
-  hFlush stdout
-  input <- getLine
+  liftIO $ do
+    putStrLn "\n== ToDo List =="
+    putStrLn (formatTodos todos)
+    putStr "Command (add <task> | done <index> | quit): "
+    hFlush stdout
+
+  input <- liftIO getLine
   case words input of
     ("add" : rest) -> do
       let newTodos = addTodo (unwords rest) todos
       loop newTodos
     ("done" : i : _) ->
-      case reads i of
-        [(n, "")] ->
-          case completeTodo n todos of
-            Right newTodos -> loop newTodos
-            Left err -> do
-              putStrLn ("Error: " ++ renderError err)
-              loop todos
-        _ -> do
-          putStrLn "Error: 数字のインデックスを指定してください"
+      case readMaybe i of
+        Just idx -> do
+          newTodos <- liftEither (completeTodo idx todos)
+          loop newTodos
+        Nothing -> do
+          liftIO $ putStrLn "インデックスには数値を入力してください。"
           loop todos
     ("quit" : _) ->
-      putStrLn "Goodbye!"
+      liftIO $ putStrLn "Goodbye!"
     _ -> do
-      putStrLn "Invalid command!"
+      liftIO $ putStrLn "不正なコマンドです。"
       loop todos
 
 -- エラーの説明を文字列に変換する関数
