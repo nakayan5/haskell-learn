@@ -1,5 +1,7 @@
 module Todo where
 
+import Control.Monad (when)
+
 data Todo = Todo
   { title :: String,
     done :: Bool
@@ -14,14 +16,21 @@ addTodo t todos = todos ++ [Todo t False]
 
 -- タスクを完了する
 completeTodo :: Int -> TodoList -> Either String TodoList
-completeTodo idx todos
-  | idx < 0 = Left "インデックスは0以上である必要があります。"
-  | idx >= length todos = Left "インデックスが範囲外です。"
-  | otherwise =
-      let (before, rest) = splitAt idx todos
-       in case rest of
-            (t : after) -> Right (before ++ [t {done = True}] ++ after)
-            [] -> Left "タスクが見つかりません。"
+completeTodo idx todos = do
+  when (idx < 0) $
+    Left "インデックスは0以上でなければなりません"
+
+  when (idx >= length todos) $
+    Left "インデックスが範囲外です"
+
+  let (before, rest) = splitAt idx todos
+
+  case rest of
+    [] -> Left "想定外のエラー：タスクが存在しません"
+    (t : after) -> do
+      when (done t) $
+        Left "すでに完了済みのタスクです"
+      return (before ++ [t {done = True}] ++ after)
 
 -- タスクリストを文字列に変換
 formatTodos :: TodoList -> String
